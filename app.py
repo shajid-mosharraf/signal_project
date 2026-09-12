@@ -6,7 +6,7 @@ import librosa
 import matplotlib.pyplot as plt
 
 # Import custom modules
-from src.audio_utils import load_audio, mix_audio, plot_waveform, plot_spectrogram
+from src.audio_utils import load_audio, mix_audio, plot_waveform, plot_spectrogram, spectral_subtraction
 from src.channel import apply_channel
 from src.transceiver import zero_forcing_equalize
 from src.separator import mix_sources_for_ica, separate_sources_ica
@@ -36,7 +36,7 @@ with st.sidebar:
         taps = [1.0]
 
     st.subheader("System Expectations")
-    n_speakers = st.number_input("Number of Speakers", min_value=2, max_value=4, value=2, help="How many voices should the system look to separate and diarize?")
+    n_speakers = st.number_input("Number of Speakers", min_value=2, max_value=5, value=2, help="How many voices should the system look to separate and diarize?")
     
     st.markdown("---")
     st.markdown("💡 **Tip:** Adjust SNR and Taps *before* uploading to see their impact on the Equalization and Separation phases.")
@@ -54,26 +54,31 @@ if uploaded_files and len(uploaded_files) >= 2:
             audio_bytes = f.read()
             data, samplerate = sf.read(io.BytesIO(audio_bytes))
             if len(data.shape) > 1:
-                data = data.mean(axis=1) # to mono
+                data = data.mean(axis=1)  # to mono
             if samplerate != sr:
                 data = librosa.resample(data, orig_sr=samplerate, target_sr=sr)
             sources.append(data)
             
     st.success(f"Successfully loaded {len(sources)} sources.")
     
-    # We create tabs to make the UI much cleaner
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "🎛️ 1. Mixture", 
-        "📡 2. Transmission", 
-        "🛠️ 3. Equalization", 
-        "✂️ 4. Separation", 
-        "⏱️ 5. Diarization"
+    # Safety Check: FastICA cannot separate more sources than we have microphones (files)
+    actual_n_speakers = min(n_speakers, len(sources))
+    if actual_n_speakers < n_speakers:
+        st.warning(f"⚠️ You requested {n_speakers} speakers, but only uploaded {len(sources)} files. Proceeding with {actual_n_speakers} speakers.")
+    
+    tab1, tab2, tab3, tab4, tab_denoise, tab5 = st.tabs([
+        "🎛️ 1. Mixture",
+        "📡 2. Transmission",
+        "🛠️ 3. Equalization",
+        "✂️ 4. Separation",
+        "🔇 5. Denoising",
+        "⏱️ 6. Diarization"
     ])
     
     with st.spinner('Running Signal Processing Pipeline...'):
         
         # 1. Mixture
-        X_mixed, mixing_matrix = mix_sources_for_ica(sources[:n_speakers])
+        X_mixed, mixing_matrix = mix_sources_for_ica(sources[:actual_n_speakers])
         norm_mix = X_mixed[:, 0] / (np.max(np.abs(X_mixed[:, 0])) + 1e-10)
         
         # 2. Transmission
@@ -88,11 +93,22 @@ if uploaded_files and len(uploaded_files) >= 2:
             X_eq[:, c] = zero_forcing_equalize(Y_received[:, c], taps)
         norm_eq = X_eq[:, 0] / (np.max(np.abs(X_eq[:, 0])) + 1e-10)
         
-        # 4. Separation
-        separated_sources = separate_sources_ica(X_eq, n_components=n_speakers)
+        # 4. Separation (MUST happen on linear signals, before non-linear denoising)
+        separated_sources_raw = separate_sources_ica(X_eq, n_components=actual_n_speakers)
         
-        # 5. Diarization
-        timeline = diarize_audio(norm_eq, sr=sr, n_speakers=n_speakers)
+        # 5. Denoising (applied to each separated voice individually)
+        separated_sources = []
+        for s_raw in separated_sources_raw:
+            s_clean = spectral_subtraction(s_raw, n_std_thresh=2.0)
+            s_clean = s_clean / (np.max(np.abs(s_clean)) + 1e-10)
+            separated_sources.append(s_clean)
+            
+        # Also denoise the mixed signal for visualization
+        norm_denoise = spectral_subtraction(norm_eq, n_std_thresh=2.0)
+        norm_denoise = norm_denoise / (np.max(np.abs(norm_denoise)) + 1e-10)
+        
+        # 6. Diarization
+        timeline = diarize_audio(norm_denoise, sr=sr, n_speakers=actual_n_speakers)
         
     # --- Rendering Tabs ---
     
@@ -132,7 +148,7 @@ if uploaded_files and len(uploaded_files) >= 2:
     with tab4:
         st.subheader("Blind Source Separation (FastICA)")
         st.markdown("The system separates the linearly mixed, equalized signals back into independent speaker sources.")
-        cols = st.columns(n_speakers)
+        cols = st.columns(actual_n_speakers)
         for i, s_sep in enumerate(separated_sources):
             with cols[i]:
                 st.markdown(f"**Speaker {i+1}**")
@@ -140,13 +156,66 @@ if uploaded_files and len(uploaded_files) >= 2:
                 fig_sep = plot_waveform(s_sep, sr=sr, title="")
                 st.pyplot(fig_sep)
 
+    with tab_denoise:
+        st.subheader("Noise Reduction (Wiener Filter)")
+        st.markdown("""
+        The Wiener Filter is the **mathematically optimal** linear estimator for recovering a signal from additive noise.
+        For each time-frequency bin, it computes a smooth gain between 0 and 1, suppressing noise while preserving the speech.
+        
+        **Compare the three signals below** to hear how close the denoised version is to the original mixture before transmission!
+        """)
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("**🟢 Original Mixture**")
+            st.caption("Before Channel")
+            st.audio(norm_mix, sample_rate=sr)
+        with col2:
+            st.markdown("**🔴 Noisy Received**")
+            st.caption("After Channel + AWGN")
+            st.audio(norm_rx, sample_rate=sr)
+        with col3:
+            st.markdown("**🔵 Denoised Recovered**")
+            st.caption("After Wiener Filter")
+            st.audio(norm_denoise, sample_rate=sr)
+        
+        st.divider()
+        
+        # Stacked waveform comparison
+        fig, axes = plt.subplots(3, 1, figsize=(10, 5), sharex=True)
+        t = np.arange(len(norm_mix)) / sr
+        
+        axes[0].plot(t, norm_mix, color="#00FF88", linewidth=0.5)
+        axes[0].fill_between(t, norm_mix, 0, color="#00FF88", alpha=0.1)
+        axes[0].set_title("Original Mixture", fontweight="bold", fontsize=10)
+        axes[0].set_ylabel("Amp")
+        
+        t_rx = np.arange(len(norm_rx)) / sr
+        axes[1].plot(t_rx, norm_rx, color="#FF007F", linewidth=0.5)
+        axes[1].fill_between(t_rx, norm_rx, 0, color="#FF007F", alpha=0.1)
+        axes[1].set_title("Noisy Received", fontweight="bold", fontsize=10)
+        axes[1].set_ylabel("Amp")
+        
+        t_dn = np.arange(len(norm_denoise)) / sr
+        axes[2].plot(t_dn, norm_denoise, color="#00E5FF", linewidth=0.5)
+        axes[2].fill_between(t_dn, norm_denoise, 0, color="#00E5FF", alpha=0.1)
+        axes[2].set_title("Denoised Recovered", fontweight="bold", fontsize=10)
+        axes[2].set_ylabel("Amp")
+        axes[2].set_xlabel("Time (s)")
+        
+        for ax in axes:
+            ax.grid(True, linestyle=':', alpha=0.4)
+        
+        plt.tight_layout()
+        st.pyplot(fig)
+
     with tab5:
         st.subheader("Speaker Diarization (Who Spoke When)")
-        st.markdown("Clustering the equalized mixture's audio features to map temporal speaker activity.")
+        st.markdown("Clustering the denoised mixture's audio features to map temporal speaker activity.")
         
         # Plot Gantt chart style timeline
         fig, ax = plt.subplots(figsize=(10, 3))
-        colors = ['#00E5FF', '#FF007F', '#00FF88', '#B200FF']
+        colors = ['#00E5FF', '#FF007F', '#00FF88', '#B200FF', '#FFD700']
         
         # Draw grid
         ax.grid(True, axis='x', linestyle=':', alpha=0.5)

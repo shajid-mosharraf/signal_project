@@ -30,6 +30,67 @@ def load_audio(filepath, sr=16000, mono=True):
         print(f"Error loading {filepath}: {e}")
         return None
 
+def spectral_subtraction(y, n_std_thresh=1.5):
+    """
+    Removes broadband noise using Spectral Gating/Subtraction.
+    Removes broadband noise using a Wiener Filter approach.
+    
+    The Wiener filter is the mathematically optimal linear filter for
+    recovering a signal from additive noise. For each time-frequency bin,
+    it computes a gain:
+        G(f,t) = max(0, 1 - noise_power / signal_power)
+    This is far superior to simple spectral subtraction because it
+    smoothly attenuates noisy bins rather than hard-zeroing them,
+    which avoids the 'musical noise' artifacts.
+    """
+    # Compute STFT
+    S = librosa.stft(y)
+    mag = np.abs(S)
+    phase = np.exp(1.j * np.angle(S))
+    
+    # Estimate noise from the quietest 10% of frames
+    frame_energy = np.sum(mag, axis=0)
+    noise_frames = np.argsort(frame_energy)[:max(1, int(mag.shape[1] * 0.1))]
+    # Estimate noise profile from the quietest 15% of frames
+    frame_energy = np.sum(mag ** 2, axis=0)
+    n_noise_frames = max(1, int(mag.shape[1] * 0.15))
+    noise_frames = np.argsort(frame_energy)[:n_noise_frames]
+    
+    # Mean and Std of noise magnitude
+    noise_mag = np.mean(mag[:, noise_frames], axis=1, keepdims=True)
+    noise_std = np.std(mag[:, noise_frames], axis=1, keepdims=True)
+    # Noise power spectrum (average power per frequency bin)
+    noise_power = np.mean(mag[:, noise_frames] ** 2, axis=1, keepdims=True)
+    
+    # Threshold for noise
+    noise_thresh = noise_mag + (n_std_thresh * noise_std)
+    # Apply overestimation factor to be more aggressive
+    noise_power = noise_power * n_std_thresh
+    
+    # Spectral Gating (Subtract noise, floor at 0)
+    mag_clean = mag - noise_thresh
+    mag_clean[mag_clean < 0] = 0.0
+    # Signal power
+    signal_power = mag ** 2
+    
+    # Wiener gain: smoothly scales each bin between 0 and 1
+    gain = np.maximum(0, 1.0 - (noise_power / (signal_power + 1e-10)))
+    
+    # Apply gain to magnitude
+    mag_clean = mag * gain
+    
+    # Reconstruct signal
+    S_clean = mag_clean * phase
+    y_clean = librosa.istft(S_clean)
+    
+    # Ensure it matches original length precisely
+    if len(y_clean) > len(y):
+        y_clean = y_clean[:len(y)]
+    else:
+        y_clean = np.pad(y_clean, (0, len(y) - len(y_clean)))
+        
+    return y_clean
+
 def save_audio(filepath, audio, sr=16000):
     """Saves a numpy array as an audio file."""
     sf.write(filepath, audio, sr)

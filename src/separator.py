@@ -19,7 +19,9 @@ def mix_sources_for_ica(sources, mixing_matrix=None):
     if mixing_matrix is None:
         # Default: random full-rank mixing matrix
         np.random.seed(42) # For reproducibility
-        mixing_matrix = np.random.rand(len(sources), len(sources))
+        # Use randn (normal distribution) so we get negative and positive weights,
+        # which creates much better linear independence for ICA to latch onto!
+        mixing_matrix = np.random.randn(len(sources), len(sources))
         
     X = np.dot(S, mixing_matrix.T)
     return X, mixing_matrix
