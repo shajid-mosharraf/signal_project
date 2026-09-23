@@ -1,17 +1,36 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
+import base64
+import os
+
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
 def apply_custom_theme():
     """Injects massive custom CSS animations and a custom JS particle background."""
     
+    # Load background image
+    bg_img_path = os.path.join("assets", "bg_wave.jpg")
+    if os.path.exists(bg_img_path):
+        bg_ext = "jpg"
+        bg_bin = get_base64_of_bin_file(bg_img_path)
+        bg_style = f"background-image: url('data:image/{bg_ext};base64,{bg_bin}'); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;"
+    else:
+        bg_style = "background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #1f4037, #99f2c8); background-size: 400% 400%; animation: GradientFlow 15s ease infinite;"
+        
     # 1. Advanced CSS Animations
     custom_css = """
     <style>
     /* Global App Background - Intense Animated Gradient */
+    /* Global App Background */
     .stApp {
         background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #1f4037, #99f2c8);
         background-size: 400% 400%;
         animation: GradientFlow 15s ease infinite;
+        """ + bg_style + """
         color: #E0E0E0;
     }
     
