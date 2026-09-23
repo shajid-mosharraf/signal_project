@@ -4,6 +4,7 @@ import streamlit.components.v1 as components
 import base64
 import os
 
+@st.cache_data(show_spinner=False)
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()

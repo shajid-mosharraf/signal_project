@@ -8,3 +8,7 @@ soundfile
 
 SQLAlchemy
 psycopg2-binary
+
+fastapi
+uvicorn
+python-multipart

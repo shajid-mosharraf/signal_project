@@ -1,8 +1,12 @@
 import librosa
+import librosa.display
 import soundfile as sf
 import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
+import base64
+import io
+import streamlit.components.v1 as components
 
 # Apply a modern dark style globally for all plots
 plt.style.use("dark_background")
@@ -34,58 +38,26 @@ def load_audio(filepath, sr=16000, mono=True):
 @st.cache_data(show_spinner=False)
 def spectral_subtraction(y, n_std_thresh=1.5):
     """
-    Removes broadband noise using Spectral Gating/Subtraction.
     Removes broadband noise using a Wiener Filter approach.
-    
-    The Wiener filter is the mathematically optimal linear filter for
-    recovering a signal from additive noise. For each time-frequency bin,
-    it computes a gain:
-        G(f,t) = max(0, 1 - noise_power / signal_power)
-    This is far superior to simple spectral subtraction because it
-    smoothly attenuates noisy bins rather than hard-zeroing them,
-    which avoids the 'musical noise' artifacts.
     """
-    # Compute STFT
     S = librosa.stft(y)
     mag = np.abs(S)
     phase = np.exp(1.j * np.angle(S))
     
-    # Estimate noise from the quietest 10% of frames
-    frame_energy = np.sum(mag, axis=0)
-    noise_frames = np.argsort(frame_energy)[:max(1, int(mag.shape[1] * 0.1))]
-    # Estimate noise profile from the quietest 15% of frames
     frame_energy = np.sum(mag ** 2, axis=0)
     n_noise_frames = max(1, int(mag.shape[1] * 0.15))
     noise_frames = np.argsort(frame_energy)[:n_noise_frames]
     
-    # Mean and Std of noise magnitude
-    noise_mag = np.mean(mag[:, noise_frames], axis=1, keepdims=True)
-    noise_std = np.std(mag[:, noise_frames], axis=1, keepdims=True)
-    # Noise power spectrum (average power per frequency bin)
     noise_power = np.mean(mag[:, noise_frames] ** 2, axis=1, keepdims=True)
-    
-    # Threshold for noise
-    noise_thresh = noise_mag + (n_std_thresh * noise_std)
-    # Apply overestimation factor to be more aggressive
     noise_power = noise_power * n_std_thresh
     
-    # Spectral Gating (Subtract noise, floor at 0)
-    mag_clean = mag - noise_thresh
-    mag_clean[mag_clean < 0] = 0.0
-    # Signal power
     signal_power = mag ** 2
-    
-    # Wiener gain: smoothly scales each bin between 0 and 1
     gain = np.maximum(0, 1.0 - (noise_power / (signal_power + 1e-10)))
-    
-    # Apply gain to magnitude
     mag_clean = mag * gain
     
-    # Reconstruct signal
     S_clean = mag_clean * phase
     y_clean = librosa.istft(S_clean)
     
-    # Ensure it matches original length precisely
     if len(y_clean) > len(y):
         y_clean = y_clean[:len(y)]
     else:
@@ -109,7 +81,6 @@ def mix_audio(audio_list):
         padded = np.pad(a, (0, max_len - len(a)), 'constant')
         mixed += padded
         
-    # Normalize to avoid clipping
     if np.max(np.abs(mixed)) > 0:
         mixed = mixed / np.max(np.abs(mixed))
     return mixed
@@ -122,13 +93,18 @@ def calculate_energy(audio):
     """Calculates total signal energy."""
     return np.sum(audio**2)
 
-def plot_waveform(audio, sr=16000, title="Waveform", color="#00E5FF"):
+# ============================================================
+# Plotting Functions (cached with underscore prefix to skip hashing)
+# ============================================================
+
+@st.cache_resource(show_spinner=False)
+def plot_waveform(_audio, version, sr=16000, title="Waveform", color="#00E5FF"):
     """Returns a matplotlib figure of the waveform."""
     fig, ax = plt.subplots(figsize=(10, 3))
-    time = np.arange(len(audio)) / sr
+    time = np.arange(len(_audio)) / sr
     
-    ax.plot(time, audio, color=color, linewidth=1.2, alpha=0.9)
-    ax.fill_between(time, audio, 0, color=color, alpha=0.15) # Add a nice glow effect underneath
+    ax.plot(time, _audio, color=color, linewidth=1.2, alpha=0.9)
+    ax.fill_between(time, _audio, 0, color=color, alpha=0.15)
     
     ax.set_title(title, fontweight="bold", pad=15)
     ax.set_xlabel("Time (s)", fontweight="bold")
@@ -138,12 +114,12 @@ def plot_waveform(audio, sr=16000, title="Waveform", color="#00E5FF"):
     plt.tight_layout()
     return fig
 
-def plot_spectrogram(audio, sr=16000, title="Spectrogram"):
+@st.cache_resource(show_spinner=False)
+def plot_spectrogram(_audio, version, sr=16000, title="Spectrogram"):
     """Returns a matplotlib figure of the spectrogram."""
     fig, ax = plt.subplots(figsize=(10, 3))
-    D = librosa.amplitude_to_db(np.abs(librosa.stft(audio)), ref=np.max)
+    D = librosa.amplitude_to_db(np.abs(librosa.stft(_audio)), ref=np.max)
     
-    # Use 'inferno' or 'magma' for a blazing, attractive look
     img = librosa.display.specshow(D, sr=sr, x_axis='time', y_axis='log', ax=ax, cmap='inferno')
     
     cbar = fig.colorbar(img, ax=ax, format="%+2.0f dB", pad=0.02)
@@ -158,11 +134,11 @@ def plot_spectrogram(audio, sr=16000, title="Spectrogram"):
     return fig
 
 @st.cache_data(show_spinner=False)
-def get_fft(audio, sr=16000):
+def get_fft(_audio, version, sr=16000):
     """Computes the FFT, returning frequency bins, magnitude, and phase."""
-    n = len(audio)
+    n = len(_audio)
     freqs = np.fft.rfftfreq(n, d=1/sr)
-    fft_vals = np.fft.rfft(audio)
+    fft_vals = np.fft.rfft(_audio)
     
     magnitude = np.abs(fft_vals)
     magnitude_db = 20 * np.log10(np.clip(magnitude, 1e-10, None))
@@ -170,22 +146,55 @@ def get_fft(audio, sr=16000):
     phase = np.angle(fft_vals)
     return freqs, magnitude_db, phase
 
-import base64
-import io
-import streamlit.components.v1 as components
+@st.cache_resource(show_spinner=False)
+def plot_magnitude_spectrum(_freqs, _magnitude_db, version, title="Magnitude Spectrum", color="#FF007F"):
+    """Returns a matplotlib figure of the magnitude spectrum."""
+    fig, ax = plt.subplots(figsize=(10, 3))
+    
+    ax.plot(_freqs, _magnitude_db, color=color, linewidth=1.5, alpha=0.9)
+    ax.fill_between(_freqs, _magnitude_db, np.min(_magnitude_db), color=color, alpha=0.15)
+    
+    ax.set_title(title, fontweight="bold", pad=15)
+    ax.set_xlabel("Frequency (Hz)", fontweight="bold")
+    ax.set_ylabel("Magnitude (dB)", fontweight="bold")
+    ax.grid(True, linestyle=':', alpha=0.5)
+    
+    plt.tight_layout()
+    return fig
+
+@st.cache_resource(show_spinner=False)
+def plot_phase_spectrum(_freqs, _phase, version, title="Phase Spectrum", color="#B200FF"):
+    """Returns a matplotlib figure of the phase spectrum."""
+    fig, ax = plt.subplots(figsize=(10, 3))
+    
+    ax.scatter(_freqs, _phase, color=color, s=2, alpha=0.5)
+    
+    ax.set_title(title, fontweight="bold", pad=15)
+    ax.set_xlabel("Frequency (Hz)", fontweight="bold")
+    ax.set_ylabel("Phase (Radians)", fontweight="bold")
+    ax.grid(True, linestyle=':', alpha=0.5)
+    
+    plt.tight_layout()
+    return fig
+
+def get_dominant_frequency(freqs, magnitude):
+    """Finds the frequency with the maximum magnitude."""
+    idx = np.argmax(magnitude)
+    return freqs[idx]
+
+# ============================================================
+# Audio Visualizer & Professional EQ (JS Components)
+# ============================================================
 
 def play_audio_with_visualizer(audio, sr=16000):
     """Replaces standard st.audio with a custom JS Audio Visualizer (Bouncing Bars)."""
-    # 1. Convert numpy array to WAV bytes in memory
     buffer = io.BytesIO()
     sf.write(buffer, audio, sr, format='WAV')
     buffer.seek(0)
     
-    # 2. Encode to base64
     audio_base64 = base64.b64encode(buffer.read()).decode('utf-8')
     audio_src = f"data:audio/wav;base64,{audio_base64}"
     
-    # 3. Create the HTML/JS Component
     html_code = f"""
     <div style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 1px solid rgba(0,229,255,0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
         <audio id="audio-player" controls style="width: 100%; outline: none;">
@@ -204,7 +213,6 @@ def play_audio_with_visualizer(audio, sr=16000):
         let source;
         let isInitialized = false;
         
-        // Match canvas internal resolution to display size
         function resize() {{
             canvas.width = canvas.offsetWidth;
             canvas.height = canvas.offsetHeight;
@@ -231,7 +239,7 @@ def play_audio_with_visualizer(audio, sr=16000):
             const dataArray = new Uint8Array(bufferLength);
             
             function draw() {{
-                if (audio.paused) return; // Stop drawing when paused
+                if (audio.paused) return;
                 
                 requestAnimationFrame(draw);
                 analyser.getByteFrequencyData(dataArray);
@@ -245,15 +253,12 @@ def play_audio_with_visualizer(audio, sr=16000):
                 for(let i = 0; i < bufferLength; i++) {{
                     barHeight = dataArray[i];
                     
-                    // Create Neon Gradient
                     let gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
-                    gradient.addColorStop(0, '#00E5FF'); // Cyan
-                    gradient.addColorStop(0.5, '#FF007F'); // Pink
-                    gradient.addColorStop(1, '#00FF88'); // Green
+                    gradient.addColorStop(0, '#00E5FF');
+                    gradient.addColorStop(0.5, '#FF007F');
+                    gradient.addColorStop(1, '#00FF88');
                     
                     ctx.fillStyle = gradient;
-                    
-                    // Draw bouncing bar
                     ctx.fillRect(x, canvas.height - barHeight/1.5, barWidth, barHeight/1.5);
                     
                     x += barWidth + 1;
@@ -335,20 +340,18 @@ def render_professional_eq(audio, sr=16000):
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 source = audioCtx.createMediaElementSource(audio);
                 
-                // Create a chain of 10 Biquad Peaking Filters
                 let prevNode = source;
                 freqs.forEach((freq, index) => {{
                     let filter = audioCtx.createBiquadFilter();
                     filter.type = "peaking";
                     filter.frequency.value = freq;
-                    filter.Q.value = 1.41; // Standard bandwidth for octave EQ
+                    filter.Q.value = 1.41;
                     filter.gain.value = document.getElementById('fader-' + freq).value;
                     
                     prevNode.connect(filter);
                     prevNode = filter;
                     filters.push(filter);
                     
-                    // Add listener to fader to update filter gain in real-time
                     const fader = document.getElementById('fader-' + freq);
                     const valLabel = document.getElementById('val-' + freq);
                     fader.addEventListener('input', function(e) {{
@@ -359,7 +362,6 @@ def render_professional_eq(audio, sr=16000):
                     }});
                 }});
                 
-                // Connect the last filter to the speakers
                 prevNode.connect(audioCtx.destination);
                 isInitialized = true;
             }}
@@ -372,36 +374,3 @@ def render_professional_eq(audio, sr=16000):
     """
     components.html(html_code, height=450)
 
-def plot_magnitude_spectrum(freqs, magnitude_db, title="Magnitude Spectrum", color="#FF007F"):
-    """Returns a matplotlib figure of the magnitude spectrum."""
-    fig, ax = plt.subplots(figsize=(10, 3))
-    
-    ax.plot(freqs, magnitude_db, color=color, linewidth=1.5, alpha=0.9)
-    ax.fill_between(freqs, magnitude_db, np.min(magnitude_db), color=color, alpha=0.15)
-    
-    ax.set_title(title, fontweight="bold", pad=15)
-    ax.set_xlabel("Frequency (Hz)", fontweight="bold")
-    ax.set_ylabel("Magnitude (dB)", fontweight="bold")
-    ax.grid(True, linestyle=':', alpha=0.5)
-    
-    plt.tight_layout()
-    return fig
-
-def plot_phase_spectrum(freqs, phase, title="Phase Spectrum", color="#B200FF"):
-    """Returns a matplotlib figure of the phase spectrum."""
-    fig, ax = plt.subplots(figsize=(10, 3))
-    
-    ax.scatter(freqs, phase, color=color, s=2, alpha=0.5)
-    
-    ax.set_title(title, fontweight="bold", pad=15)
-    ax.set_xlabel("Frequency (Hz)", fontweight="bold")
-    ax.set_ylabel("Phase (Radians)", fontweight="bold")
-    ax.grid(True, linestyle=':', alpha=0.5)
-    
-    plt.tight_layout()
-    return fig
-
-def get_dominant_frequency(freqs, magnitude):
-    """Finds the frequency with the maximum magnitude."""
-    idx = np.argmax(magnitude)
-    return freqs[idx]
