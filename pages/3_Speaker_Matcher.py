@@ -8,8 +8,10 @@ import matplotlib.pyplot as plt
 # Import custom styling
 from src.audio_utils import plot_spectrogram
 from src.matcher import get_engine_and_session, enroll_speaker, identify_speaker, Speaker
+from src.theme import apply_custom_theme
 
 st.set_page_config(page_title="Speaker Matcher", page_icon="🔐", layout="wide")
+apply_custom_theme()
 
 # Apply modern dark styling
 plt.style.use("dark_background")

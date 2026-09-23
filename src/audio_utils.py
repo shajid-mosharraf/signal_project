@@ -2,6 +2,7 @@ import librosa
 import soundfile as sf
 import numpy as np
 import matplotlib.pyplot as plt
+import streamlit as st
 
 # Apply a modern dark style globally for all plots
 plt.style.use("dark_background")
@@ -30,6 +31,7 @@ def load_audio(filepath, sr=16000, mono=True):
         print(f"Error loading {filepath}: {e}")
         return None
 
+@st.cache_data(show_spinner=False)
 def spectral_subtraction(y, n_std_thresh=1.5):
     """
     Removes broadband noise using Spectral Gating/Subtraction.
@@ -155,6 +157,7 @@ def plot_spectrogram(audio, sr=16000, title="Spectrogram"):
     plt.tight_layout()
     return fig
 
+@st.cache_data(show_spinner=False)
 def get_fft(audio, sr=16000):
     """Computes the FFT, returning frequency bins, magnitude, and phase."""
     n = len(audio)
@@ -166,6 +169,208 @@ def get_fft(audio, sr=16000):
     
     phase = np.angle(fft_vals)
     return freqs, magnitude_db, phase
+
+import base64
+import io
+import streamlit.components.v1 as components
+
+def play_audio_with_visualizer(audio, sr=16000):
+    """Replaces standard st.audio with a custom JS Audio Visualizer (Bouncing Bars)."""
+    # 1. Convert numpy array to WAV bytes in memory
+    buffer = io.BytesIO()
+    sf.write(buffer, audio, sr, format='WAV')
+    buffer.seek(0)
+    
+    # 2. Encode to base64
+    audio_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+    audio_src = f"data:audio/wav;base64,{audio_base64}"
+    
+    # 3. Create the HTML/JS Component
+    html_code = f"""
+    <div style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 15px; border: 1px solid rgba(0,229,255,0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+        <audio id="audio-player" controls style="width: 100%; outline: none;">
+            <source src="{audio_src}" type="audio/wav">
+        </audio>
+        <canvas id="visualizer" style="width: 100%; height: 150px; margin-top: 15px; border-radius: 8px; background: rgba(0,0,0,0.6);"></canvas>
+    </div>
+    
+    <script>
+        const audio = document.getElementById("audio-player");
+        const canvas = document.getElementById("visualizer");
+        const ctx = canvas.getContext("2d");
+        
+        let audioCtx;
+        let analyser;
+        let source;
+        let isInitialized = false;
+        
+        // Match canvas internal resolution to display size
+        function resize() {{
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }}
+        window.addEventListener('resize', resize);
+        resize();
+
+        audio.onplay = function() {{
+            if (!isInitialized) {{
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                source = audioCtx.createMediaElementSource(audio);
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+                analyser.fftSize = 256;
+                isInitialized = true;
+            }}
+            
+            if (audioCtx.state === 'suspended') {{
+                audioCtx.resume();
+            }}
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            function draw() {{
+                if (audio.paused) return; // Stop drawing when paused
+                
+                requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(dataArray);
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const barWidth = (canvas.width / bufferLength) * 2.5;
+                let barHeight;
+                let x = 0;
+                
+                for(let i = 0; i < bufferLength; i++) {{
+                    barHeight = dataArray[i];
+                    
+                    // Create Neon Gradient
+                    let gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
+                    gradient.addColorStop(0, '#00E5FF'); // Cyan
+                    gradient.addColorStop(0.5, '#FF007F'); // Pink
+                    gradient.addColorStop(1, '#00FF88'); // Green
+                    
+                    ctx.fillStyle = gradient;
+                    
+                    // Draw bouncing bar
+                    ctx.fillRect(x, canvas.height - barHeight/1.5, barWidth, barHeight/1.5);
+                    
+                    x += barWidth + 1;
+                }}
+            }}
+            draw();
+        }};
+    </script>
+    """
+    components.html(html_code, height=250)
+
+def render_professional_eq(audio, sr=16000):
+    """Renders a real-time, professional 10-band Graphic EQ using Web Audio API."""
+    buffer = io.BytesIO()
+    sf.write(buffer, audio, sr, format='WAV')
+    buffer.seek(0)
+    audio_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+    audio_src = f"data:audio/wav;base64,{audio_base64}"
+    
+    html_code = f"""
+    <div style="background: rgba(15,20,30,0.8); padding: 30px; border-radius: 15px; border: 1px solid rgba(0,229,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.8); color: #fff; font-family: sans-serif;">
+        <h3 style="margin-top:0; text-align:center; color: #00E5FF; text-transform: uppercase; letter-spacing: 2px;">Live 10-Band EQ Mixer</h3>
+        <audio id="eq-audio" controls style="width: 100%; margin-bottom: 20px; outline: none;">
+            <source src="{audio_src}" type="audio/wav">
+        </audio>
+        
+        <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+            <button onclick="setPreset('flat')" style="background: #333; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">Flat</button>
+            <button onclick="setPreset('bass')" style="background: #FF007F; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">Bass Boost</button>
+            <button onclick="setPreset('treble_cut')" style="background: #00E5FF; color: black; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">Treble Cut</button>
+            <button onclick="setPreset('vshape')" style="background: #00FF88; color: black; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">V-Shape (Pop)</button>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; height: 200px; padding: 20px; background: rgba(0,0,0,0.5); border-radius: 10px;">
+            {''.join([f'''
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 8%;">
+                <span style="font-size: 12px; margin-bottom: 10px; color: #FF007F;" id="val-{f}">{0}dB</span>
+                <input type="range" id="fader-{f}" min="-12" max="12" value="0" step="1" 
+                    style="appearance: slider-vertical; width: 20px; height: 120px; cursor: pointer; accent-color: #00E5FF;">
+                <span style="font-size: 10px; margin-top: 10px; color: #A0A0A0;">{f}Hz</span>
+            </div>
+            ''' for f in [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]])}
+        </div>
+    </div>
+    
+    <script>
+        const audio = document.getElementById("eq-audio");
+        let audioCtx;
+        let source;
+        let filters = [];
+        const freqs = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+        let isInitialized = false;
+
+        const presets = {{
+            'flat': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            'bass': [10, 8, 6, 2, 0, 0, 0, 0, 0, 0],
+            'treble_cut': [0, 0, 0, 0, 0, -2, -4, -6, -8, -12],
+            'vshape': [8, 6, 2, 0, -2, -2, 0, 2, 6, 8]
+        }};
+
+        function setPreset(name) {{
+            const gains = presets[name];
+            freqs.forEach((freq, index) => {{
+                const fader = document.getElementById('fader-' + freq);
+                const valLabel = document.getElementById('val-' + freq);
+                const v = gains[index];
+                fader.value = v;
+                valLabel.innerText = (v > 0 ? '+' : '') + v + 'dB';
+                valLabel.style.color = v == 0 ? '#FF007F' : '#00E5FF';
+                
+                if(filters[index]) {{
+                    filters[index].gain.value = v;
+                }}
+            }});
+        }}
+
+        audio.onplay = function() {{
+            if (!isInitialized) {{
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                source = audioCtx.createMediaElementSource(audio);
+                
+                // Create a chain of 10 Biquad Peaking Filters
+                let prevNode = source;
+                freqs.forEach((freq, index) => {{
+                    let filter = audioCtx.createBiquadFilter();
+                    filter.type = "peaking";
+                    filter.frequency.value = freq;
+                    filter.Q.value = 1.41; // Standard bandwidth for octave EQ
+                    filter.gain.value = document.getElementById('fader-' + freq).value;
+                    
+                    prevNode.connect(filter);
+                    prevNode = filter;
+                    filters.push(filter);
+                    
+                    // Add listener to fader to update filter gain in real-time
+                    const fader = document.getElementById('fader-' + freq);
+                    const valLabel = document.getElementById('val-' + freq);
+                    fader.addEventListener('input', function(e) {{
+                        const v = e.target.value;
+                        filter.gain.value = v;
+                        valLabel.innerText = (v > 0 ? '+' : '') + v + 'dB';
+                        valLabel.style.color = v == 0 ? '#FF007F' : '#00E5FF';
+                    }});
+                }});
+                
+                // Connect the last filter to the speakers
+                prevNode.connect(audioCtx.destination);
+                isInitialized = true;
+            }}
+            
+            if (audioCtx.state === 'suspended') {{
+                audioCtx.resume();
+            }}
+        }};
+    </script>
+    """
+    components.html(html_code, height=450)
 
 def plot_magnitude_spectrum(freqs, magnitude_db, title="Magnitude Spectrum", color="#FF007F"):
     """Returns a matplotlib figure of the magnitude spectrum."""
