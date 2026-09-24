@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master Audio Lab (FastAPI)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=1790244487">
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     
@@ -184,7 +184,10 @@
                                 <option value="highpass">Highpass</option>
                                 <option value="bandpass">Bandpass</option>
                             </select>
-                            <input type="number" id="f-cut" placeholder="Cutoff Freq (Hz)" value="1000" class="w-full bg-gray-700 text-white p-2 rounded mb-4">
+                            <div class="flex space-x-2 mb-4">
+                                <input type="number" id="f-cut" placeholder="Cutoff (Hz)" value="1000" class="w-full bg-gray-700 text-white p-2 rounded">
+                                <input type="number" id="f-cut-high" placeholder="High Cutoff (Hz)" value="4000" class="w-full bg-gray-700 text-white p-2 rounded hidden">
+                            </div>
                             <button id="filter-btn" class="w-full bg-gradient-to-r from-green-600 to-green-400 hover:from-green-500 hover:to-green-300 text-gray-900 font-bold py-2 rounded-lg">Apply Filter via Backend</button>
                         </div>
                     </div>

@@ -82,7 +82,7 @@ document.getElementById('rev-btn').addEventListener('click', async () => {
     try {
         const res = await fetch('/api/reverse', {method: 'POST', body: fd});
         if(!res.ok) { alert('Backend Error: ' + await res.text()); throw new Error('Backend failed'); }
-        const blob = await res.blob(); updateEditorPlots(currentBlob, blob); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
+        const blob = await res.blob(); updateEditorPlots(currentBlob, blob, false); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
     } catch(e) {}
     btn.innerText = 'Reverse Audio';
 });
@@ -259,14 +259,32 @@ document.getElementById('analyze-btn').addEventListener('click', async () => {
     document.getElementById('analysis-loading').classList.add('hidden');
 });
 
+
+// Dynamic Filter UI
+document.getElementById('f-type').addEventListener('change', (e) => {
+    const type = e.target.value;
+    const fCut = document.getElementById('f-cut');
+    const fCutHigh = document.getElementById('f-cut-high');
+    if (type === 'bandpass') {
+        fCut.placeholder = 'Low Cutoff (Hz)';
+        fCut.classList.replace('w-full', 'w-1/2');
+        fCutHigh.classList.replace('w-full', 'w-1/2');
+        fCutHigh.classList.remove('hidden');
+    } else {
+        fCut.placeholder = 'Cutoff (Hz)';
+        fCut.classList.replace('w-1/2', 'w-full');
+        fCutHigh.classList.add('hidden');
+    }
+});
+
 // FILTERS
 document.getElementById('filter-btn').addEventListener('click', async () => {
     if(!currentFile) return;
     const btn = document.getElementById('filter-btn'); btn.innerText = 'Filtering...';
-    const fd = new FormData(); fd.append('file', currentBlob, 'audio.wav'); fd.append('f_type', document.getElementById('f-type').value); fd.append('f_order', 5); fd.append('cutoff_low', document.getElementById('f-cut').value);
+    const fd = new FormData(); fd.append('file', currentBlob, 'audio.wav'); fd.append('f_type', document.getElementById('f-type').value); fd.append('f_order', 5); fd.append('cutoff_low', document.getElementById('f-cut').value); fd.append('cutoff_high', document.getElementById('f-cut-high').value);
     try {
         const res = await fetch('/api/filter', {method: 'POST', body: fd}); if(!res.ok) { alert('Backend Error: ' + await res.text()); throw new Error('Backend failed'); }
-        const blob = await res.blob(); updateEditorPlots(currentBlob, blob); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
+        const blob = await res.blob(); updateEditorPlots(currentBlob, blob, true); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
     } catch(e) {}
     btn.innerText = 'Apply Filter via Backend';
 });
@@ -298,7 +316,7 @@ document.getElementById('eq-btn').addEventListener('click', async () => {
     const fd = new FormData(); fd.append('file', currentBlob, 'audio.wav'); fd.append('taps', document.getElementById('ch-taps').value); fd.append('snr', document.getElementById('ch-snr').value); fd.append('eq_type', document.getElementById('eq-type').value);
     try {
         const res = await fetch('/api/equalize', {method: 'POST', body: fd}); if(!res.ok) { alert('Backend Error: ' + await res.text()); throw new Error('Backend failed'); }
-        const blob = await res.blob(); updateEditorPlots(currentBlob, blob); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
+        const blob = await res.blob(); updateEditorPlots(currentBlob, blob, true); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
     } catch(e) {}
     btn.innerText = '??? Recover Audio (Apply Equalizer)';
 });
@@ -310,7 +328,7 @@ document.getElementById('trim-btn').addEventListener('click', async () => {
     const fd = new FormData(); fd.append('file', currentBlob, 'audio.wav'); fd.append('start', document.getElementById('trim-start').value || 0); fd.append('end', document.getElementById('trim-end').value || 0);
     try {
         const res = await fetch('/api/trim', {method: 'POST', body: fd}); if(!res.ok) { alert('Backend Error: ' + await res.text()); throw new Error('Backend failed'); } if(!res.ok) { alert(await res.text()); throw new Error('Backend error'); }
-        const blob = await res.blob(); updateEditorPlots(currentBlob, blob); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
+        const blob = await res.blob(); updateEditorPlots(currentBlob, blob, false); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
     } catch(e) {}
     btn.innerText = 'Trim';
 });
@@ -322,7 +340,7 @@ document.getElementById('echo-btn').addEventListener('click', async () => {
     const fd = new FormData(); fd.append('file', currentBlob, 'audio.wav'); fd.append('delay_ms', document.getElementById('echo-delay').value); fd.append('decay', document.getElementById('echo-decay').value); fd.append('echoes', document.getElementById('echo-count').value);
     try {
         const res = await fetch('/api/echo', {method: 'POST', body: fd}); if(!res.ok) { alert('Backend Error: ' + await res.text()); throw new Error('Backend failed'); }
-        const blob = await res.blob(); updateEditorPlots(currentBlob, blob); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
+        const blob = await res.blob(); updateEditorPlots(currentBlob, blob, false); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
     } catch(e) {}
     btn.innerText = 'Add Echo (Backend)';
 });
@@ -334,7 +352,7 @@ document.getElementById('resample-btn').addEventListener('click', async () => {
     const fd = new FormData(); fd.append('file', currentBlob, 'audio.wav'); fd.append('speed_factor', document.getElementById('speed-val').value);
     try {
         const res = await fetch('/api/resample', {method: 'POST', body: fd}); if(!res.ok) { alert('Backend Error: ' + await res.text()); throw new Error('Backend failed'); }
-        const blob = await res.blob(); updateEditorPlots(currentBlob, blob); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
+        const blob = await res.blob(); updateEditorPlots(currentBlob, blob, false); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
     } catch(e) {}
     btn.innerText = 'Resample (Chipmunk)';
 });
@@ -369,12 +387,13 @@ resetBtn.addEventListener('click', () => { document.getElementById('editor-visua
 
 
 
-async function updateEditorPlots(oldBlob, newBlob) {
+async function updateEditorPlots(oldBlob, newBlob, includeFreq = true) {
     document.getElementById('editor-visuals').classList.remove('hidden');
     document.getElementById('plot-before').src = ''; document.getElementById('plot-after').src = '';
     const fd = new FormData();
     fd.append('file_before', oldBlob, 'before.wav');
     fd.append('file_after', newBlob, 'after.wav');
+    fd.append('include_freq', includeFreq ? 'true' : 'false');
     try {
         const res = await fetch('/api/compare_plots', {method: 'POST', body: fd});
         const data = await res.json();

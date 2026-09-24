@@ -206,23 +206,60 @@ async def route_reverse(file: UploadFile = File(...)):
 
 
 @router.post('/compare_plots')
-async def route_compare_plots(file_before: UploadFile = File(...), file_after: UploadFile = File(...)):
+async def route_compare_plots(file_before: UploadFile = File(...), file_after: UploadFile = File(...), include_freq: str = Form("true")):
     data_b, sr_b = get_audio_from_upload(file_before)
     data_a, sr_a = get_audio_from_upload(file_after)
 
     plt.style.use('dark_background')
-    fig_b, ax_b = plt.subplots(figsize=(8, 2))
-    ax_b.plot(np.linspace(0, len(data_b)/sr_b, len(data_b)), data_b, color='#00E5FF', linewidth=1)
-    ax_b.set_title('Before (Actual)', color='white')
+    
+    show_freq = include_freq.lower() == "true"
+    figsize = (8, 4) if show_freq else (8, 2)
+    
+    # Before Plot
+    if show_freq:
+        fig_b, (ax1_b, ax2_b) = plt.subplots(2, 1, figsize=figsize)
+    else:
+        fig_b, ax1_b = plt.subplots(figsize=figsize)
+        
+    ax1_b.plot(np.linspace(0, len(data_b)/sr_b, len(data_b)), data_b, color='#00E5FF', linewidth=1)
+    ax1_b.set_title('Before (Actual) - Waveform', color='white')
+    
+    if show_freq:
+        n = len(data_b)
+        freqs = np.fft.rfftfreq(n, d=1/sr_b)
+        mag_db = 20 * np.log10(np.clip(np.abs(np.fft.rfft(data_b)), 1e-10, None))
+        ax2_b.plot(freqs, mag_db, color='#00FF88', linewidth=1)
+        ax2_b.set_title('Frequency Spectrum (FFT)', color='white')
+        ax2_b.set_xlabel('Frequency (Hz)')
+        ax2_b.set_ylabel('Magnitude (dB)')
+    
+    fig_b.tight_layout()
 
-    fig_a, ax_a = plt.subplots(figsize=(8, 2))
-    ax_a.plot(np.linspace(0, len(data_a)/sr_a, len(data_a)), data_a, color='#FF00FF', linewidth=1)
-    ax_a.set_title('After (Modified)', color='white')
+    # After Plot
+    if show_freq:
+        fig_a, (ax1_a, ax2_a) = plt.subplots(2, 1, figsize=figsize)
+    else:
+        fig_a, ax1_a = plt.subplots(figsize=figsize)
+        
+    ax1_a.plot(np.linspace(0, len(data_a)/sr_a, len(data_a)), data_a, color='#FF00FF', linewidth=1)
+    ax1_a.set_title('After (Modified) - Waveform', color='white')
+    
+    if show_freq:
+        n = len(data_a)
+        freqs = np.fft.rfftfreq(n, d=1/sr_a)
+        mag_db = 20 * np.log10(np.clip(np.abs(np.fft.rfft(data_a)), 1e-10, None))
+        ax2_a.plot(freqs, mag_db, color='#00FF88', linewidth=1)
+        ax2_a.set_title('Frequency Spectrum (FFT)', color='white')
+        ax2_a.set_xlabel('Frequency (Hz)')
+        ax2_a.set_ylabel('Magnitude (dB)')
+        
+    fig_a.tight_layout()
 
     return {
         'before': 'data:image/png;base64,' + fig_to_base64(fig_b),
         'after': 'data:image/png;base64,' + fig_to_base64(fig_a)
     }
+
 
 
 
