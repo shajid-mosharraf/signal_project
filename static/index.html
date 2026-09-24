@@ -46,6 +46,23 @@
                         hover:file:bg-cyan-400 mb-4
                     "/>
                     
+                    
+                    <!-- Microphone Recorder -->
+                    <div class="mt-4 border-t border-gray-700 pt-4 mb-4">
+                        <p class="text-sm text-gray-400 mb-2">Or record from microphone:</p>
+                        <div class="flex space-x-2">
+                            <button id="record-start-btn" class="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold py-2 rounded-lg flex items-center justify-center transition shadow-lg">
+                                <span class="mr-2">⏺️</span> Record
+                            </button>
+                            <button id="record-stop-btn" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 rounded-lg flex items-center justify-center transition hidden shadow-lg">
+                                <span class="mr-2">⏹️</span> Stop
+                            </button>
+                        </div>
+                        <div id="record-indicator" class="hidden mt-2 text-red-400 text-sm animate-pulse text-center font-bold">
+                            Recording in progress...
+                        </div>
+                    </div>
+
                     <div id="player-container" class="hidden">
                         <audio id="main-audio" controls class="w-full mb-4 outline-none"></audio>
                         <button id="reset-btn" class="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded-lg transition">Reset to Original</button>
@@ -249,6 +266,21 @@
                         <h3 class="text-xl font-bold text-cyan-300 mb-4">1. Enroll a New Speaker</h3>
                         <input type="text" id="enroll-name" placeholder="Speaker Name (e.g. Alice)" class="w-full bg-gray-700 text-white p-2 rounded mb-4 outline-none">
                         <input type="file" id="enroll-audio" accept="audio/*" class="block w-full text-sm text-gray-400 mb-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-cyan-500 file:text-gray-900"/>
+                        <div class="mt-4 border-t border-gray-700 pt-4 mb-4">
+                            <p class="text-sm text-gray-400 mb-2">Or record from microphone:</p>
+                            <div class="flex space-x-2">
+                                <button id="enroll-record-btn" class="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold py-2 rounded-lg flex items-center justify-center transition shadow-lg">
+                                    <span class="mr-2">⏺️</span> Record
+                                </button>
+                                <button id="enroll-stop-btn" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 rounded-lg flex items-center justify-center transition hidden shadow-lg">
+                                    <span class="mr-2">⏹️</span> Stop
+                                </button>
+                            </div>
+                            <div id="enroll-indicator" class="hidden mt-2 text-red-400 text-sm animate-pulse text-center font-bold">
+                                Recording in progress...
+                            </div>
+                        </div>
+                        <audio id="enroll-audio-player" controls class="w-full mb-4 outline-none hidden"></audio>
                         <button id="enroll-btn" class="w-full bg-gradient-to-r from-cyan-600 to-cyan-400 hover:from-cyan-500 hover:to-cyan-300 text-gray-900 font-bold py-2 rounded-lg">Save to Database</button>
                         <p id="enroll-status" class="mt-4 text-sm text-green-400 hidden"></p>
                     </div>
@@ -257,6 +289,21 @@
                     <div class="bg-gray-800 p-6 rounded-xl">
                         <h3 class="text-xl font-bold text-pink-300 mb-4">2. Identify Unknown Audio</h3>
                         <input type="file" id="test-audio" accept="audio/*" class="block w-full text-sm text-gray-400 mb-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-pink-500 file:text-gray-900"/>
+                        <div class="mt-4 border-t border-gray-700 pt-4 mb-4">
+                            <p class="text-sm text-gray-400 mb-2">Or record from microphone:</p>
+                            <div class="flex space-x-2">
+                                <button id="test-record-btn" class="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold py-2 rounded-lg flex items-center justify-center transition shadow-lg">
+                                    <span class="mr-2">⏺️</span> Record
+                                </button>
+                                <button id="test-stop-btn" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 rounded-lg flex items-center justify-center transition hidden shadow-lg">
+                                    <span class="mr-2">⏹️</span> Stop
+                                </button>
+                            </div>
+                            <div id="test-indicator" class="hidden mt-2 text-red-400 text-sm animate-pulse text-center font-bold">
+                                Recording in progress...
+                            </div>
+                        </div>
+                        <audio id="test-audio-player" controls class="w-full mb-4 outline-none hidden"></audio>
                         <button id="test-btn" class="w-full bg-gradient-to-r from-pink-600 to-pink-400 hover:from-pink-500 hover:to-pink-300 text-white font-bold py-2 rounded-lg">Identify Match</button>
                         
                         <div id="test-results" class="mt-4 hidden bg-gray-900 p-4 rounded-lg text-center">
@@ -267,7 +314,31 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            
+                    </div>
+                    <!-- Database Viewer -->
+                    <div class="bg-gray-800 p-6 rounded-xl mt-8 col-span-1 md:col-span-2">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-green-300">3. Enrolled Speakers Database</h3>
+                            <button id="db-refresh-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-4 rounded transition">🔄 Refresh</button>
+                        </div>
+                        <div id="db-loading" class="text-gray-400 hidden animate-pulse mb-2">Loading database...</div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-gray-300">
+                                <thead class="border-b border-gray-700">
+                                    <tr>
+                                        <th class="py-2">ID</th>
+                                        <th class="py-2">Speaker Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="db-list" class="divide-y divide-gray-700">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                            <p id="db-empty" class="text-gray-500 text-center py-4 hidden">Database is empty.</p>
+                        </div>
+                    </div>
+
         </div> <!-- End of PAGE: MATCHER -->
 
         <!-- PAGE: VAD -->
@@ -282,8 +353,25 @@
                         <h3 class="text-xl font-bold text-cyan-300 mb-4">1. Settings</h3>
                         <label class="text-gray-400 text-sm">Upload Audio:</label>
                         <input type="file" id="vad-audio" accept="audio/*" class="block w-full text-sm text-gray-400 mb-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-cyan-500 file:text-gray-900"/>
+                        <div class="mt-4 border-t border-gray-700 pt-4 mb-4">
+                            <p class="text-sm text-gray-400 mb-2">Or record from microphone:</p>
+                            <div class="flex space-x-2">
+                                <button id="vad-record-btn" class="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold py-2 rounded-lg flex items-center justify-center transition shadow-lg">
+                                    <span class="mr-2">⏺️</span> Record
+                                </button>
+                                <button id="vad-stop-btn" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 rounded-lg flex items-center justify-center transition hidden shadow-lg">
+                                    <span class="mr-2">⏹️</span> Stop
+                                </button>
+                            </div>
+                            <div id="vad-indicator" class="hidden mt-2 text-red-400 text-sm animate-pulse text-center font-bold">
+                                Recording in progress...
+                            </div>
+                        </div>
                         
+                        
+                        <audio id="vad-audio-player" controls class="w-full mb-4 mt-4 outline-none hidden"></audio>
                         <label class="text-gray-400 text-sm">Threshold Ratio (default 0.05):</label>
+
                         <input type="number" id="vad-thresh" step="0.01" value="0.05" class="w-full bg-gray-700 text-white p-2 rounded mb-4">
                         
                         <button id="vad-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-bold py-3 rounded-lg">Detect Activity</button>

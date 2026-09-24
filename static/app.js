@@ -393,6 +393,9 @@ document.getElementById('vad-audio').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
         vadFile = file;
+        const player = document.getElementById('vad-audio-player');
+        player.src = URL.createObjectURL(file);
+        player.classList.remove('hidden');
     }
 });
 
@@ -440,3 +443,240 @@ document.getElementById('vad-btn').addEventListener('click', async () => {
     document.getElementById('vad-loading').classList.add('hidden');
     btn.innerText = 'Detect Activity';
 });
+
+
+// =====================================
+// MICROPHONE RECORDER (WITH NATIVE WAV ENCODING)
+// =====================================
+let mediaRecorder;
+let audioChunks = [];
+
+const recordStartBtn = document.getElementById('record-start-btn');
+const recordStopBtn = document.getElementById('record-stop-btn');
+const recordIndicator = document.getElementById('record-indicator');
+
+if (recordStartBtn) {
+    recordStartBtn.addEventListener('click', async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            
+            mediaRecorder.addEventListener('dataavailable', event => {
+                audioChunks.push(event.data);
+            });
+            
+            mediaRecorder.addEventListener('stop', async () => {
+                const webmBlob = new Blob(audioChunks);
+                
+                // Decode WebM/Ogg to raw AudioBuffer using AudioContext
+                const actx = new (window.AudioContext || window.webkitAudioContext)();
+                const arrayBuffer = await webmBlob.arrayBuffer();
+                const audioBuffer = await actx.decodeAudioData(arrayBuffer);
+                
+                // Encode raw AudioBuffer to standard WAV using helper function below
+                const wavBuffer = audioBufferToWav(audioBuffer, {float32: false});
+                const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+                
+                // Feed the newly created WAV into our existing pipeline!
+                const file = new File([wavBlob], "microphone_recording.wav", { type: 'audio/wav' });
+                currentFile = file; currentBlob = file; mainAudio.src = URL.createObjectURL(file); playerContainer.classList.remove('hidden'); document.getElementById('editor-visuals').classList.add('hidden');
+                
+                // Clean up tracks
+                stream.getTracks().forEach(track => track.stop());
+            });
+            
+            mediaRecorder.start();
+            
+            recordStartBtn.classList.add('hidden');
+            recordStopBtn.classList.remove('hidden');
+            recordIndicator.classList.remove('hidden');
+            
+        } catch (err) {
+            alert('Microphone access denied or not available: ' + err);
+        }
+    });
+
+    recordStopBtn.addEventListener('click', () => {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        recordStopBtn.classList.add('hidden');
+        recordStartBtn.classList.remove('hidden');
+        recordIndicator.classList.add('hidden');
+    });
+}
+
+// Minimal WAV encoder helper
+function audioBufferToWav(buffer, opt) {
+    opt = opt || {};
+    var numChannels = buffer.numberOfChannels;
+    var sampleRate = buffer.sampleRate;
+    var format = opt.float32 ? 3 : 1;
+    var bitDepth = format === 3 ? 32 : 16;
+    
+    var result;
+    if (numChannels === 2) {
+        var inputL = buffer.getChannelData(0);
+        var inputR = buffer.getChannelData(1);
+        var length = inputL.length + inputR.length;
+        result = new Float32Array(length);
+        var index = 0, inputIndex = 0;
+        while (index < length) {
+            result[index++] = inputL[inputIndex];
+            result[index++] = inputR[inputIndex];
+            inputIndex++;
+        }
+    } else {
+        result = buffer.getChannelData(0);
+    }
+    
+    var bytesPerSample = bitDepth / 8;
+    var blockAlign = numChannels * bytesPerSample;
+    var outBuffer = new ArrayBuffer(44 + result.length * bytesPerSample);
+    var view = new DataView(outBuffer);
+    
+    function writeString(view, offset, string) {
+        for (var i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+        }
+    }
+    
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + result.length * bytesPerSample, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, result.length * bytesPerSample, true);
+    
+    var offset = 44;
+    for (var i = 0; i < result.length; i++, offset += 2) {
+        var s = Math.max(-1, Math.min(1, result[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    
+    return outBuffer;
+}
+
+
+
+// =====================================
+// REUSABLE MICROPHONE RECORDER LOGIC
+// =====================================
+function setupMicRecorder(prefix, onWavReady) {
+    const startBtn = document.getElementById(`${prefix}-record-btn`);
+    const stopBtn = document.getElementById(`${prefix}-stop-btn`);
+    const indicator = document.getElementById(`${prefix}-indicator`);
+    let localMediaRecorder;
+    let localAudioChunks = [];
+
+    if (!startBtn) return;
+
+    startBtn.addEventListener('click', async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            localMediaRecorder = new MediaRecorder(stream);
+            localAudioChunks = [];
+            
+            localMediaRecorder.addEventListener('dataavailable', event => {
+                localAudioChunks.push(event.data);
+            });
+            
+            localMediaRecorder.addEventListener('stop', async () => {
+                const webmBlob = new Blob(localAudioChunks);
+                const actx = new (window.AudioContext || window.webkitAudioContext)();
+                const arrayBuffer = await webmBlob.arrayBuffer();
+                const audioBuffer = await actx.decodeAudioData(arrayBuffer);
+                const wavBuffer = audioBufferToWav(audioBuffer, {float32: false});
+                const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+                const file = new File([wavBlob], `mic_${prefix}.wav`, { type: 'audio/wav' });
+                
+                onWavReady(file);
+                stream.getTracks().forEach(track => track.stop());
+            });
+            
+            localMediaRecorder.start();
+            startBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+            indicator.classList.remove('hidden');
+        } catch (err) {
+            alert('Microphone access denied: ' + err);
+        }
+    });
+
+    stopBtn.addEventListener('click', () => {
+        if (localMediaRecorder && localMediaRecorder.state !== 'inactive') {
+            localMediaRecorder.stop();
+        }
+        stopBtn.classList.add('hidden');
+        startBtn.classList.remove('hidden');
+        indicator.classList.add('hidden');
+    });
+}
+
+// Setup the additional microphones:
+setupMicRecorder('enroll', (file) => { 
+    enrollFile = file; 
+    const player = document.getElementById('enroll-audio-player');
+    player.src = URL.createObjectURL(file);
+    player.classList.remove('hidden');
+});
+setupMicRecorder('test', (file) => { 
+    testFile = file; 
+    const player = document.getElementById('test-audio-player');
+    player.src = URL.createObjectURL(file);
+    player.classList.remove('hidden');
+});
+setupMicRecorder('vad', (file) => { 
+    vadFile = file; 
+    const player = document.getElementById('vad-audio-player');
+    player.src = URL.createObjectURL(file);
+    player.classList.remove('hidden');
+});
+
+
+
+// =====================================
+// SPEAKER MATCHER DATABASE VIEWER
+// =====================================
+async function loadSpeakerDatabase() {
+    const dbLoading = document.getElementById('db-loading');
+    const dbList = document.getElementById('db-list');
+    const dbEmpty = document.getElementById('db-empty');
+    if (!dbLoading) return;
+    
+    dbLoading.classList.remove('hidden');
+    dbList.innerHTML = '';
+    
+    try {
+        const res = await fetch('/api/matcher/list');
+        const data = await res.json();
+        
+        if (data.speakers && data.speakers.length > 0) {
+            dbEmpty.classList.add('hidden');
+            data.speakers.forEach(speaker => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="py-2">${speaker.id}</td><td class="py-2 text-cyan-400 font-bold">${speaker.name}</td>`;
+                dbList.appendChild(tr);
+            });
+        } else {
+            dbEmpty.classList.remove('hidden');
+        }
+    } catch(e) {
+        console.error(e);
+    }
+    dbLoading.classList.add('hidden');
+}
+
+if (document.getElementById('db-refresh-btn')) {
+    document.getElementById('db-refresh-btn').addEventListener('click', loadSpeakerDatabase);
+    // Load once on startup if button exists
+    loadSpeakerDatabase();
+}
