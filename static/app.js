@@ -482,7 +482,7 @@ if (recordStartBtn) {
                 
                 // Feed the newly created WAV into our existing pipeline!
                 const file = new File([wavBlob], "microphone_recording.wav", { type: 'audio/wav' });
-                currentFile = file; currentBlob = file; mainAudio.src = URL.createObjectURL(file); playerContainer.classList.remove('hidden'); document.getElementById('editor-visuals').classList.add('hidden');
+                currentFile = file; currentBlob = file; mainAudio.src = URL.createObjectURL(file); document.getElementById('audio-upload').value = ''; playerContainer.classList.remove('hidden'); document.getElementById('editor-visuals').classList.add('hidden');
                 
                 // Clean up tracks
                 stream.getTracks().forEach(track => track.stop());
@@ -626,18 +626,21 @@ function setupMicRecorder(prefix, onWavReady) {
 // Setup the additional microphones:
 setupMicRecorder('enroll', (file) => { 
     enrollFile = file; 
+    document.getElementById('enroll-audio').value = '';
     const player = document.getElementById('enroll-audio-player');
     player.src = URL.createObjectURL(file);
     player.classList.remove('hidden');
 });
 setupMicRecorder('test', (file) => { 
     testFile = file; 
+    document.getElementById('test-audio').value = '';
     const player = document.getElementById('test-audio-player');
     player.src = URL.createObjectURL(file);
     player.classList.remove('hidden');
 });
 setupMicRecorder('vad', (file) => { 
     vadFile = file; 
+    document.getElementById('vad-audio').value = '';
     const player = document.getElementById('vad-audio-player');
     player.src = URL.createObjectURL(file);
     player.classList.remove('hidden');
