@@ -80,6 +80,7 @@
                         <button class="tab-btn whitespace-nowrap" data-target="tab-spec">🔭 Spectrogram</button>
                         <button class="tab-btn whitespace-nowrap" data-target="tab-filter">🎛️ Digital Filters</button>
                         <button class="tab-btn whitespace-nowrap" data-target="tab-channel">📡 Comm Channel</button>
+                        <button class="tab-btn whitespace-nowrap" data-target="tab-denoise">🔇 Noise Reducer</button>
                     </div>
 
                     
@@ -192,26 +193,22 @@
                         </div>
                     </div>
 
-                    <!-- Tab: Channel -->
+                    
+                      <!-- Tab: Channel -->
                     <div id="tab-channel" class="tab-content hidden">
                         <h3 class="text-xl font-bold text-pink-400 mb-4">?? 1. Simulate Channel Degradation</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                             <!-- Multipath -->
-                            <div class="bg-gray-800 p-4 rounded-xl">
+                            <div class="bg-gray-800 p-4 rounded-xl md:col-span-2">
                                 <label class="flex items-center space-x-2 mb-2 text-cyan-300 font-bold">
                                     <input type="checkbox" id="ch-mp-check" checked class="accent-cyan-400">
                                     <span>Add Multipath / ISI</span>
                                 </label>
                                 <input type="text" id="ch-taps" placeholder="Taps (e.g. 1.0, 0.6, 0.3)" value="1.0, 0.6, 0.3" class="w-full bg-gray-700 text-white p-2 rounded mb-2">
                             </div>
-                            <!-- AWGN -->
-                            <div class="bg-gray-800 p-4 rounded-xl">
-                                <label class="flex items-center space-x-2 mb-2 text-pink-300 font-bold">
-                                    <input type="checkbox" id="ch-awgn-check" checked class="accent-pink-400">
-                                    <span>Add AWGN Noise</span>
-                                </label>
-                                <input type="number" id="ch-snr" placeholder="SNR (dB)" value="20" class="w-full bg-gray-700 text-white p-2 rounded mb-2">
-                            </div>
+                            <!-- AWGN Removed per request, keeping hidden inputs to prevent JS/MMSE crashing -->
+                            <input type="hidden" id="ch-awgn-check" value="false">
+                            <input type="hidden" id="ch-snr" value="20">
                             <!-- Interference -->
                             <div class="bg-gray-800 p-4 rounded-xl md:col-span-2">
                                 <label class="flex items-center space-x-2 mb-2 text-red-300 font-bold">
@@ -240,6 +237,35 @@
                         </div>
                     </div>
 
+                    <!-- Tab: Denoise -->
+                      <div id="tab-denoise" class="tab-content hidden">
+                          <!-- Denoise Section -->
+                      <h3 class="text-xl font-bold text-pink-400 mb-4 mt-8">🎙️ 2. Steady Background Noise Reducer</h3>
+                      <p class="text-sm text-gray-400 mb-4">Removes steady hum/fan noise. Compare Time-Domain smoothing vs Frequency-Domain filtering.</p>
+                      
+                      <div class="bg-gray-800 p-6 rounded-xl">
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                  <label class="text-gray-300 text-sm font-bold mb-2 block">Reduction Method</label>
+                                  <select id="denoise-method" class="w-full mb-4">
+                                      <option value="freq">Frequency-Domain (Spectral Subtraction)</option>
+                                      <option value="time">Time-Domain (Moving Average Smoothing)</option>
+                                  </select>
+                              </div>
+                              <div>
+                                  <label class="text-gray-300 text-sm font-bold mb-2 block flex justify-between">
+                                      <span>Reduction Strength</span>
+                                      <span id="denoise-val" class="text-cyan-400">5</span>
+                                  </label>
+                                  <input type="range" id="denoise-strength" min="1" max="20" step="1" value="5" class="w-full accent-cyan-400 mt-2">
+                              </div>
+                          </div>
+                          <button id="denoise-btn" class="w-full bg-gradient-to-r from-pink-600 to-pink-400 hover:from-pink-500 hover:to-pink-300 text-white font-bold py-3 rounded-lg shadow-lg mt-4">Apply Noise Reduction</button>
+                      </div>
+
+                      
+                      </div>
+
                     <!-- Tab: Spectrogram -->
                     <div id="tab-spec" class="tab-content hidden">
                         <div class="flex items-center space-x-4 mb-4">
@@ -255,6 +281,9 @@
                     </div>
                 </div>
             </div>
+
+                      
+
         </div> <!-- End of PAGE: LAB -->
 
         <!-- PAGE: SPEAKER MATCHER -->
@@ -404,7 +433,7 @@
 
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=1790250275"></script>
 </body>
 </html>
 

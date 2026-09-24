@@ -263,3 +263,46 @@ async def route_compare_plots(file_before: UploadFile = File(...), file_after: U
 
 
 
+
+
+@router.post("/denoise")
+async def route_denoise(
+    file: UploadFile = File(...),
+    method: str = Form(...),
+    strength: float = Form(5.0)
+):
+    data, sr = get_audio_from_upload(file)
+    
+    if method == "time":
+        # Time-domain smoothing (Moving Average)
+        window_size = int(strength)
+        if window_size < 1: window_size = 1
+        window = np.ones(window_size) / window_size
+        denoised = np.convolve(data, window, mode='same')
+    
+    elif method == "freq":
+        # Frequency-domain filtering (Spectral Subtraction)
+        # Convert strength (1 to 20) to a reasonable multiplier (0.1 to 3.0)
+        mult = strength / 5.0 
+        
+        S = librosa.stft(data, n_fft=2048, hop_length=512)
+        mag, phase = np.abs(S), np.angle(S)
+        
+        # Estimate noise profile from the first 0.1 seconds of audio
+        noise_frames = int(0.1 * sr / 512)
+        if noise_frames == 0 or noise_frames >= mag.shape[1]:
+            noise_profile = np.mean(mag, axis=1, keepdims=True)
+        else:
+            noise_profile = np.mean(mag[:, :noise_frames], axis=1, keepdims=True)
+            
+        mag_clean = mag - (noise_profile * mult)
+        mag_clean = np.maximum(mag_clean, 0.0)
+        
+        S_clean = mag_clean * np.exp(1.j * phase)
+        denoised = librosa.istft(S_clean, hop_length=512)
+        
+    else:
+        denoised = data
+        
+    wav_bytes = audio_to_wav_bytes(denoised, sr)
+    return Response(content=wav_bytes, media_type="audio/wav")

@@ -289,6 +289,38 @@ document.getElementById('filter-btn').addEventListener('click', async () => {
     btn.innerText = 'Apply Filter via Backend';
 });
 
+
+// DENOISE
+const denoiseStrength = document.getElementById('denoise-strength');
+if (denoiseStrength) {
+    denoiseStrength.addEventListener('input', (e) => {
+        document.getElementById('denoise-val').innerText = e.target.value;
+    });
+}
+
+const denoiseBtn = document.getElementById('denoise-btn');
+if (denoiseBtn) {
+    denoiseBtn.addEventListener('click', async () => {
+        if(!currentFile) return;
+        denoiseBtn.innerText = 'Reducing Noise...';
+        const fd = new FormData(); 
+        fd.append('file', currentBlob, 'audio.wav'); 
+        fd.append('method', document.getElementById('denoise-method').value); 
+        fd.append('strength', document.getElementById('denoise-strength').value);
+        try {
+            const res = await fetch('/api/denoise', {method: 'POST', body: fd}); 
+            if(!res.ok) { alert('Backend Error: ' + await res.text()); throw new Error('Backend failed'); }
+            const blob = await res.blob(); 
+            // We want to see frequency plots because it's frequency filtering!
+            updateEditorPlots(currentBlob, blob, true); 
+            currentBlob = blob; 
+            mainAudio.src = URL.createObjectURL(blob); 
+            mainAudio.play();
+        } catch(e) {}
+        denoiseBtn.innerText = 'Apply Noise Reduction';
+    });
+}
+
 // CHANNEL
 document.getElementById('channel-btn').addEventListener('click', async () => {
     if(!currentFile) return;
@@ -298,7 +330,7 @@ document.getElementById('channel-btn').addEventListener('click', async () => {
     fd.append('taps', document.getElementById('ch-taps').value); 
     fd.append('snr', document.getElementById('ch-snr').value); 
     fd.append('add_mp', document.getElementById('ch-mp-check').checked); 
-    fd.append('add_noise', document.getElementById('ch-awgn-check').checked);
+    fd.append('add_noise', document.getElementById('ch-awgn-check').type === 'checkbox' ? document.getElementById('ch-awgn-check').checked : false);
     fd.append('add_inter', document.getElementById('ch-inter-check').checked);
     fd.append('inter_freq', document.getElementById('ch-inter-freq').value);
     fd.append('inter_snr', document.getElementById('ch-inter-snr').value);
