@@ -207,10 +207,12 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     });
 });
 
+let enrollFile = null;
+let testFile = null;
 // SPEAKER MATCHER API
 document.getElementById('enroll-btn').addEventListener('click', async () => {
     const name = document.getElementById('enroll-name').value;
-    const file = document.getElementById('enroll-audio').files[0];
+    const file = enrollFile || document.getElementById('enroll-audio').files[0];
     if(!name || !file) return alert('Name and Audio required');
     const btn = document.getElementById('enroll-btn'); btn.innerText = 'Enrolling...';
     const fd = new FormData(); fd.append('name', name); fd.append('file', file);
@@ -224,7 +226,7 @@ document.getElementById('enroll-btn').addEventListener('click', async () => {
 });
 
 document.getElementById('test-btn').addEventListener('click', async () => {
-    const file = document.getElementById('test-audio').files[0];
+    const file = testFile || document.getElementById('test-audio').files[0];
     if(!file) return alert('Audio required');
     const btn = document.getElementById('test-btn'); btn.innerText = 'Identifying...';
     const fd = new FormData(); fd.append('file', file);
