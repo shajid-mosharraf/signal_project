@@ -4,7 +4,7 @@
 }
 
 body {
-    background-color: #0E1117;
+    background-color: #2d3748;
     overflow-x: hidden;
 }
 
@@ -26,7 +26,7 @@ body {
     background: rgba(20, 25, 35, 0.7);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 229, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
 }
 
@@ -43,8 +43,8 @@ body {
 }
 
 .tab-btn.active {
-    color: #00E5FF;
-    border-bottom-color: #00E5FF;
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
 }
 
 input[type=range][orient=vertical] {
@@ -85,18 +85,11 @@ button:active {
     transform: translateY(1px);
 }
 
-/* Specific glow for colored buttons */
-button[class*="cyan"]:hover {
-    box-shadow: 0 0 20px rgba(0, 229, 255, 0.6) !important;
-}
 
-button[class*="pink"]:hover {
-    box-shadow: 0 0 20px rgba(236, 72, 153, 0.6) !important;
-}
 
-button[class*="green"]:hover {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6) !important;
-}
+
+
+
 
 /* Page and Tab transition animations */
 .tab-content {
@@ -127,144 +120,97 @@ button[class*="green"]:hover {
 }
 
 
-/* === EXTREME VIBRANCY & ANIMATIONS === */
 
-/* Holographic Animated Text for all Headers */
+/* === ELEGANT VIBRANCY === */
+/* Soft animated gradients for headers */
 h1, h2 {
-    background: linear-gradient(to right, #00E5FF, #FF00FF, #00FF88, #00E5FF);
-    background-size: 300% auto;
+    background: linear-gradient(to right, #38bdf8, #c084fc, #818cf8, #38bdf8);
+    background-size: 200% auto;
     color: transparent !important;
     -webkit-background-clip: text;
     background-clip: text;
-    animation: textShine 4s linear infinite;
-    filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.5));
+    animation: softTextShine 10s linear infinite;
 }
-@keyframes textShine {
-    to { background-position: 300% center; }
+@keyframes softTextShine {
+    to { background-position: 200% center; }
 }
 
-/* Pulsing Neon Borders for Glass Panels */
+/* Elegant glowing hover on inputs/selects/buttons */
+input:focus, select:focus, button[class*="cyan"]:hover, button[class*="pink"]:hover, button[class*="green"]:hover {
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.3) !important;
+    border-color: #38bdf8 !important;
+}
+
+/* Very subtle pulse on active tabs */
+.tab-btn.active {
+    color: #38bdf8 !important;
+    border-bottom-color: #38bdf8 !important;
+    animation: softPulseTab 4s infinite alternate;
+}
+@keyframes softPulseTab {
+    from { text-shadow: 0 0 2px rgba(56, 189, 248, 0.2); }
+    to { text-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
+}
+
+/* Gentle glass panel border on hover */
+.glass-panel:hover {
+    border-color: rgba(192, 132, 252, 0.4);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7), 0 0 15px rgba(192, 132, 252, 0.1);
+}
+
+/* === ENHANCED VIBRANCY === */
+/* Deep, slow animated background */
+body {
+    background: linear-gradient(-45deg, #2d3748, #374151, #283046, #2d3748);
+    background-size: 300% 300%;
+    animation: slowGradientBG 20s ease infinite;
+}
+@keyframes slowGradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Bring the wave back to life, subtly */
+.background-wave {
+    mix-blend-mode: overlay !important;
+    opacity: 0.3 !important;
+    animation: gentleFloat 20s ease-in-out infinite alternate !important;
+}
+@keyframes gentleFloat {
+    0% { transform: scale(1) translateY(0px); opacity: 0.15; }
+    100% { transform: scale(1.05) translateY(-15px); opacity: 0.35; }
+}
+
+/* Flowing gradients inside buttons */
+button[class*="gradient-to-r"] {
+    background-size: 200% auto !important;
+    animation: buttonFlow 4s linear infinite;
+}
+@keyframes buttonFlow {
+    to { background-position: 200% center; }
+}
+
+/* Elegant glowing animated border for glass panels */
 .glass-panel {
     position: relative;
-    background: rgba(10, 15, 25, 0.8);
+    z-index: 1;
 }
 .glass-panel::before {
     content: '';
     position: absolute;
-    top: -2px; left: -2px; right: -2px; bottom: -2px;
-    background: linear-gradient(45deg, #ff00ff, #00e5ff, #00ff88, #ff00ff);
-    background-size: 400%;
+    top: -1px; left: -1px; right: -1px; bottom: -1px;
+    background: linear-gradient(45deg, rgba(56, 189, 248, 0.5), rgba(192, 132, 252, 0.5), rgba(56, 189, 248, 0.5));
+    background-size: 200%;
     z-index: -1;
     border-radius: 17px;
-    opacity: 0.4;
-    animation: glowBorder 8s linear infinite;
-    transition: opacity 0.3s;
+    opacity: 0;
+    animation: borderFlow 6s linear infinite;
+    transition: opacity 0.5s ease;
 }
 .glass-panel:hover::before {
     opacity: 1;
 }
-@keyframes glowBorder {
-    0% { background-position: 0% 0%; }
-    50% { background-position: 100% 100%; }
-    100% { background-position: 0% 0%; }
-}
-
-/* Neon Inputs on Focus */
-input, select {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid transparent;
-}
-input:focus, select:focus {
-    border-color: #00E5FF !important;
-    box-shadow: 0 0 20px rgba(0, 229, 255, 0.7) !important;
-    transform: scale(1.02);
-    background-color: rgba(0, 229, 255, 0.1) !important;
-    outline: none;
-}
-
-/* Glowing Sliders */
-input[type=range] {
-    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
-    transition: filter 0.3s, transform 0.3s;
-}
-input[type=range]:hover {
-    filter: drop-shadow(0 0 15px rgba(255, 0, 255, 1));
-    transform: scale(1.05);
-}
-
-/* Button continuous flowing gradient */
-button {
-    
-    animation: buttonFlow 3s linear infinite;
-}
-
-    100% { background-position: 200% center; }
-}
-
-/* Active tab text glowing pulse */
-.tab-btn.active {
-    animation: pulseTab 2s infinite alternate;
-}
-@keyframes pulseTab {
-    from { text-shadow: 0 0 5px rgba(0, 229, 255, 0.3); }
-    to { text-shadow: 0 0 20px rgba(0, 229, 255, 0.9); }
-}
-
-
-/* Seamless Button Gradients */
-button[class*="cyan"] {
-    background: linear-gradient(90deg, #0891b2, #22d3ee, #0891b2) !important;
-    
-}
-button[class*="pink"] {
-    background: linear-gradient(90deg, #db2777, #f472b6, #db2777) !important;
-    
-}
-button[class*="green"] {
-    background: linear-gradient(90deg, #16a34a, #4ade80, #16a34a) !important;
-    
-}
-
-
-
-
-/* ----------------------------- */
-/* BEAUTIFUL FORMS & INPUTS      */
-/* ----------------------------- */
-
-/* Form Elements (Inputs, Selects) */
-input[type="text"], 
-input[type="number"], 
-select {
-    background-color: #1f2937 !important; /* Tailwind bg-gray-800 */
-    color: #e2e8f0 !important; /* Tailwind text-slate-200 */
-    border: 1px solid #374151 !important; /* Tailwind border-gray-700 */
-    padding: 0.5rem 1rem !important;
-    border-radius: 0.5rem !important;
-    outline: none !important;
-    transition: all 0.3s ease-in-out !important;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3) !important;
-}
-
-/* Focus State */
-input[type="text"]:focus, 
-input[type="number"]:focus, 
-select:focus {
-    background-color: #1f2937 !important;
-    border-color: #22d3ee !important;
-    box-shadow: 0 0 10px rgba(34, 211, 238, 0.5), inset 0 2px 4px rgba(0,0,0,0.3) !important;
-}
-
-
-
-/* Checkboxes */
-input[type="checkbox"] {
-    width: 1.25rem;
-    height: 1.25rem;
-    cursor: pointer;
-    border-radius: 0.25rem;
-    transition: transform 0.2s ease-in-out;
-}
-input[type="checkbox"]:hover {
-    transform: scale(1.1);
+@keyframes borderFlow {
+    to { background-position: 200% center; }
 }

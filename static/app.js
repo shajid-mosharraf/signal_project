@@ -209,6 +209,28 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 
 let enrollFile = null;
 let testFile = null;
+
+// Handle File Upload Previews and clear mic recordings
+function setupFileUpload(inputId, playerUrlId, micVarSetter) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    el.addEventListener('change', (e) => {
+        micVarSetter(null); // Clear the mic recording variable so the file is used
+        const file = e.target.files[0];
+        if (file) {
+            const player = document.getElementById(playerUrlId);
+            if (player) {
+                player.src = URL.createObjectURL(file);
+                player.classList.remove('hidden');
+            }
+        }
+    });
+}
+
+setupFileUpload('enroll-audio', 'enroll-audio-player', (val) => { enrollFile = val; });
+setupFileUpload('test-audio', 'test-audio-player', (val) => { testFile = val; });
+setupFileUpload('vad-audio', 'vad-audio-player', (val) => { vadFile = val; });
+
 // SPEAKER MATCHER API
 document.getElementById('enroll-btn').addEventListener('click', async () => {
     const name = document.getElementById('enroll-name').value;
@@ -700,6 +722,28 @@ setupMicRecorder('vad', (file) => {
 
 
 // =====================================
+
+// Handle File Upload Previews and clear mic recordings
+function setupFileUpload(inputId, playerUrlId, micVarSetter) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    el.addEventListener('change', (e) => {
+        micVarSetter(null); // Clear the mic recording variable so the file is used
+        const file = e.target.files[0];
+        if (file) {
+            const player = document.getElementById(playerUrlId);
+            if (player) {
+                player.src = URL.createObjectURL(file);
+                player.classList.remove('hidden');
+            }
+        }
+    });
+}
+
+setupFileUpload('enroll-audio', 'enroll-audio-player', (val) => { enrollFile = val; });
+setupFileUpload('test-audio', 'test-audio-player', (val) => { testFile = val; });
+setupFileUpload('vad-audio', 'vad-audio-player', (val) => { vadFile = val; });
+
 // SPEAKER MATCHER DATABASE VIEWER
 // =====================================
 async function loadSpeakerDatabase() {
