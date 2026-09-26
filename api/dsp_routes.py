@@ -183,16 +183,6 @@ async def route_resample(file: UploadFile = File(...), speed_factor: float = For
     wav_bytes = audio_to_wav_bytes(data, new_sr)
     return Response(content=wav_bytes, media_type='audio/wav')
 
-@router.post('/alias')
-async def route_alias(file: UploadFile = File(...), factor: int = Form(...), proper: bool = Form(...)):
-    data, sr = get_audio_from_upload(file)
-    aliased_sr = sr // factor
-    if proper:
-        out_data = decimate(data, factor, ftype='iir', zero_phase=True)
-    else:
-        out_data = data[::factor]
-    wav_bytes = audio_to_wav_bytes(out_data, aliased_sr)
-    return Response(content=wav_bytes, media_type='audio/wav')
 
 
 

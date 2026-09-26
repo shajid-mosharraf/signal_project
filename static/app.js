@@ -411,17 +411,6 @@ document.getElementById('resample-btn').addEventListener('click', async () => {
     btn.innerText = 'Resample (Chipmunk)';
 });
 
-// ALIASING
-async function applyAliasing(proper) {
-    if(!currentFile) return;
-    const fd = new FormData(); fd.append('file', currentBlob, 'audio.wav'); fd.append('factor', document.getElementById('alias-factor').value); fd.append('proper', proper);
-    try {
-        const res = await fetch('/api/alias', {method: 'POST', body: fd}); if(!res.ok) { alert('Backend Error: ' + await res.text()); throw new Error('Backend failed'); }
-        const blob = await res.blob(); updateEditorPlots(currentBlob, blob); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
-    } catch(e) {}
-}
-document.getElementById('alias-proper-btn').addEventListener('click', () => applyAliasing(true));
-document.getElementById('alias-bad-btn').addEventListener('click', () => applyAliasing(false));
 
 
 
