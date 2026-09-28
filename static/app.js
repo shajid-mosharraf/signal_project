@@ -344,24 +344,7 @@ if (denoiseBtn) {
 }
 
 // CHANNEL
-document.getElementById('channel-btn').addEventListener('click', async () => {
-    if(!currentFile) return;
-    const btn = document.getElementById('channel-btn'); btn.innerText = 'Simulating...';
-        const fd = new FormData(); 
-    fd.append('file', currentBlob, 'audio.wav'); 
-    fd.append('taps', document.getElementById('ch-taps').value); 
-    fd.append('snr', document.getElementById('ch-snr').value); 
-    fd.append('add_mp', document.getElementById('ch-mp-check').checked); 
-    fd.append('add_noise', document.getElementById('ch-awgn-check').type === 'checkbox' ? document.getElementById('ch-awgn-check').checked : false);
-    fd.append('add_inter', document.getElementById('ch-inter-check').checked);
-    fd.append('inter_freq', document.getElementById('ch-inter-freq').value);
-    fd.append('inter_snr', document.getElementById('ch-inter-snr').value);
-    try {
-        const res = await fetch('/api/channel', {method: 'POST', body: fd}); if(!res.ok) { alert('Backend Error: ' + await res.text()); throw new Error('Backend failed'); }
-        const blob = await res.blob(); updateEditorPlots(currentBlob, blob); currentBlob = blob; mainAudio.src = URL.createObjectURL(blob); mainAudio.play();
-    } catch(e) {}
-    btn.innerText = 'Simulate Channel (Backend)';
-});
+
 
 // EQUALIZE
 document.getElementById('eq-btn').addEventListener('click', async () => {

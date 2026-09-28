@@ -181,51 +181,6 @@
                             <button id="filter-btn" class="w-full bg-gradient-to-r from-green-600 to-green-400 hover:from-green-500 hover:to-green-300 text-gray-900 font-bold py-2 rounded-lg">Apply Filter via Backend</button>
                         </div>
                     </div>
-
-                    
-                      <!-- Tab: Channel -->
-                    <div id="tab-channel" class="tab-content hidden">
-                        <h3 class="text-xl font-bold text-fuchsia-400 mb-4">?? 1. Simulate Channel Degradation</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                            <!-- Multipath -->
-                            <div class="bg-gray-800 p-4 rounded-xl md:col-span-2">
-                                <label class="flex items-center space-x-2 mb-2 text-cyan-300 font-bold">
-                                    <input type="checkbox" id="ch-mp-check" checked class="accent-cyan-400">
-                                    <span>Add Multipath / ISI</span>
-                                </label>
-                                <input type="text" id="ch-taps" placeholder="Taps (e.g. 1.0, 0.6, 0.3)" value="1.0, 0.6, 0.3" class="w-full bg-gray-700 text-white p-2 rounded mb-2">
-                            </div>
-                            <!-- AWGN Removed per request, keeping hidden inputs to prevent JS/MMSE crashing -->
-                            <input type="hidden" id="ch-awgn-check" value="false">
-                            <input type="hidden" id="ch-snr" value="20">
-                            <!-- Interference -->
-                            <div class="bg-gray-800 p-4 rounded-xl md:col-span-2">
-                                <label class="flex items-center space-x-2 mb-2 text-red-300 font-bold">
-                                    <input type="checkbox" id="ch-inter-check" class="accent-red-400">
-                                    <span>Add Single-Tone Jammer (Interference)</span>
-                                </label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <input type="number" id="ch-inter-freq" placeholder="Frequency (Hz)" value="1000" class="w-full bg-gray-700 text-white p-2 rounded">
-                                    <input type="number" id="ch-inter-snr" placeholder="Jammer SNR (dB)" value="10" class="w-full bg-gray-700 text-white p-2 rounded">
-                                </div>
-                            </div>
-                            
-                            <div class="md:col-span-2">
-                                <button id="channel-btn" class="w-full bg-gradient-to-r from-pink-600 to-pink-400 hover:from-pink-500 hover:to-pink-300 text-white font-bold py-3 rounded-xl shadow-lg">?? Apply Degradation (Simulate Channel)</button>
-                            </div>
-                        </div>
-
-                        <h3 class="text-xl font-bold text-cyan-400 mb-4 border-t border-gray-700 pt-6">??? 2. Receiver & Equalization</h3>
-                        <div class="bg-gray-800 p-6 rounded-xl">
-                            <p class="text-gray-400 mb-4">Attempt to recover the original signal by reversing the multipath effects. Zero-Forcing inverts the channel (but amplifies noise). MMSE balances channel inversion and noise suppression.</p>
-                            <select id="eq-type" class="w-full bg-gray-700 text-white p-3 rounded-lg mb-4">
-                                <option value="ZF">Zero-Forcing Equalizer (ZF)</option>
-                                <option value="MMSE">Minimum Mean Square Error (MMSE)</option>
-                            </select>
-                            <button id="eq-btn" class="w-full bg-gradient-to-r from-cyan-600 to-cyan-400 hover:from-cyan-500 hover:to-cyan-300 text-gray-900 font-bold py-3 rounded-xl shadow-lg">??? Recover Audio (Zero-Forcing Equalizer)</button>
-                        </div>
-                    </div>
-
                     <!-- Tab: Denoise -->
                       <div id="tab-denoise" class="tab-content hidden">
                           <!-- Denoise Section -->
@@ -422,7 +377,7 @@
 
     </div>
 
-    <script src="/static/app.js?v=1790408062"></script>
+    <script src="/static/app.js?v=1790621028"></script>
 </body>
 </html>
 

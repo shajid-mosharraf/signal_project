@@ -10,8 +10,6 @@ from pydantic import BaseModel
 from scipy.signal import decimate
 
 from src.filters import apply_filter
-from src.channel import add_awgn, add_multipath, add_interference
-from src.equalizers import zero_forcing_equalize, mmse_equalize
 
 router = APIRouter()
 
@@ -81,46 +79,7 @@ async def route_filter(
     wav_bytes = audio_to_wav_bytes(filtered, sr)
     return Response(content=wav_bytes, media_type="audio/wav")
 
-@router.post("/channel")
-async def route_channel(
-    file: UploadFile = File(...),
-    add_noise: bool = Form(True),
-    snr: float = Form(20.0),
-    add_mp: bool = Form(True),
-    taps: str = Form("1.0, 0.6, 0.3"),
-    add_inter: bool = Form(False),
-    inter_freq: float = Form(1000.0),
-    inter_snr: float = Form(10.0)
-):
-    data, sr = get_audio_from_upload(file)
-    ch_data = data.copy()
-    if add_mp:
-        tap_list = [float(x.strip()) for x in taps.split(',')]
-        ch_data = add_multipath(ch_data, tap_list)
-    if add_noise:
-        ch_data = add_awgn(ch_data, snr)
-    if add_inter:
-        ch_data = add_interference(ch_data, sr, inter_freq, inter_snr)
-        
-    wav_bytes = audio_to_wav_bytes(ch_data, sr)
-    return Response(content=wav_bytes, media_type="audio/wav")
 
-@router.post("/equalize")
-async def route_equalize(
-    file: UploadFile = File(...),
-    eq_type: str = Form("ZF"),
-    taps: str = Form("1.0, 0.6, 0.3"),
-    snr: float = Form(20.0)
-):
-    data, sr = get_audio_from_upload(file)
-    tap_list = [float(x.strip()) for x in taps.split(',')]
-    if eq_type == "ZF":
-        eq_data = zero_forcing_equalize(data, tap_list)
-    else:
-        eq_data = mmse_equalize(data, tap_list, snr)
-        
-    wav_bytes = audio_to_wav_bytes(eq_data, sr)
-    return Response(content=wav_bytes, media_type="audio/wav")
 
 
 @router.post('/analysis/plots')

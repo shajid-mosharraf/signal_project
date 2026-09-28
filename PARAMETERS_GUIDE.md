@@ -34,20 +34,9 @@ This document explains every single parameter, slider, and dropdown available in
 
 ---
 
-## 3. 📡 Comm Channel Tab
 
-### **Simulate Channel Degradation**
-*   **Add Multipath / ISI (Taps):** Represents the environment the signal is traveling through. The first number (usually `1.0`) is the direct Line-of-Sight signal. Trailing numbers (e.g., `0.6, 0.3`) represent delayed bounces off buildings or mountains. This causes Inter-Symbol Interference (ISI), heavily smearing the audio.
-*   **Single-Tone Jammer (Frequency Hz):** A malicious, continuous sine wave injected at this exact frequency to destroy audio clarity.
-*   **Jammer SNR (dB):** Signal-to-Noise Ratio. A lower number (e.g., `5 dB`) means the jammer is extremely loud compared to the voice. A higher number (e.g., `30 dB`) means the jammer is very quiet.
 
-### **Recover Audio (Equalizer)**
-*   **Zero-Forcing Equalizer (ZF):** Calculates the mathematical inverse of the Multipath Taps to perfectly un-smear the audio. **Warning:** If any background static/noise exists, ZF will violently amplify it.
-*   **Minimum Mean Square Error (MMSE):** A smarter equalizer that attempts to un-smear the echoes while simultaneously keeping the background noise strictly controlled.
-
----
-
-## 4. 🔇 Noise Reducer Tab
+## 3. 🔇 Noise Reducer Tab
 
 ### **Reduction Method**
 *   **Frequency-Domain (Spectral Subtraction):** Converts the audio to the frequency domain (using STFT), calculates the average volume of the steady static/fan noise, and literally subtracts that static magnitude from the entire file before converting it back to audio.
@@ -58,6 +47,6 @@ This document explains every single parameter, slider, and dropdown available in
 
 ---
 
-## 5. 🎛️ 10-Band Graphic Equalizer Tab
+## 4. 🎛️ 10-Band Graphic Equalizer Tab
 
 *   **Sliders (31Hz - 16000Hz):** These are HTML5 Web Audio API `BiquadFilterNodes` set to `peaking`. Moving the slider adjusts the `gain` (measured in decibels) of that specific frequency band, boosting or cutting it in real-time on your local CPU.
