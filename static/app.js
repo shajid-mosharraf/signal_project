@@ -25,7 +25,7 @@ function initAudio() {
             let filter = audioCtx.createBiquadFilter();
             filter.type = "peaking";
             filter.frequency.value = freq;
-            filter.Q.value = 1.41;
+            filter.Q.value = 1.0;
             filter.gain.value = 0;
             prevNode.connect(filter);
             prevNode = filter;
@@ -145,8 +145,8 @@ freqs.forEach((freq, idx) => {
     
     const slider = document.createElement('input');
     slider.type = 'range';
-    slider.min = '-12';
-    slider.max = '12';
+    slider.min = '-24';
+    slider.max = '24';
     slider.value = '0';
     slider.setAttribute('orient', 'vertical');
     slider.className = 'accent-cyan-400 cursor-pointer';
@@ -174,8 +174,8 @@ freqs.forEach((freq, idx) => {
 // UI: EQ Presets
 const presets = {
     'flat': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    'bass': [10, 8, 6, 2, 0, 0, 0, 0, 0, 0],
-    'treble': [0, 0, 0, 0, 0, -2, -4, -6, -8, -12]
+    'bass': [20, 16, 12, 4, 0, 0, 0, 0, 0, 0],
+    'treble': [0, 0, 0, 0, 0, -4, -8, -12, -18, -24]
 };
 
 document.querySelectorAll('.eq-preset').forEach(btn => {
@@ -464,7 +464,8 @@ document.getElementById('vad-audio').addEventListener('change', (e) => {
 });
 
 document.getElementById('vad-btn').addEventListener('click', async () => {
-    if(!vadFile) { alert("Please upload audio for VAD first."); return; }
+    const file = vadFile || document.getElementById('vad-audio').files[0];
+    if(!file) { alert("Please upload or record audio for VAD first."); return; }
     
     const btn = document.getElementById('vad-btn');
     btn.innerText = 'Analyzing...';
@@ -472,7 +473,7 @@ document.getElementById('vad-btn').addEventListener('click', async () => {
     document.getElementById('vad-plot').classList.add('hidden');
     
     const fd = new FormData();
-    fd.append('file', vadFile);
+    fd.append('file', file);
     fd.append('threshold', document.getElementById('vad-thresh').value || 0.05);
     
     try {
